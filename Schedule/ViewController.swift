@@ -26,6 +26,10 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
             UserDefaults.standard.synchronize()
         }
     }
+    var paramText: String?
+    var paraDate: Int?
+    var paraCellRow: Int?
+    
     let titleCellIdentifier: String = "titleCell"
     let listCellIdentifier: String = "listCell"
     let cellForAddIdentifier: String = "addCell"
@@ -45,9 +49,6 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         checkBoxAndSave(checkBox: sender)
     }
     
-    @IBAction func textFieldChaged(_ sender: UITextField) {
-        saveTextField(toDoTextField: sender)
-    }
     
     func addList() {
         if toDoLists[selectedDate] == nil {
@@ -65,11 +66,6 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         boolForCheckBoxButton[selectedDate]![checkBox.tag] = !boolForCheckBoxButton[selectedDate]![checkBox.tag]
         
         tableView.reloadData()
-    }
-    
-    func saveTextField(toDoTextField: UITextField) {
-        //강제 캐스팅 수정, UserDefaults
-        toDoLists[selectedDate]![toDoTextField.tag] = toDoTextField.text!
     }
     
     func loadSavedData() {
@@ -125,7 +121,7 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         return false
     }
     
-    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
             toDoLists[selectedDate]?.remove(at: indexPath.row)
             tableView.deleteRows(at: [indexPath], with: .automatic)
@@ -147,15 +143,18 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
             guard let listCell: ToDoTableViewCell = tableView.dequeueReusableCell(withIdentifier: listCellIdentifier, for: indexPath) as? ToDoTableViewCell else {
                 return UITableViewCell()
             }
-            if let toDoList = toDoLists[selectedDate] {
+            if let toDoList = toDoLists[selectedDate], let boolForCheckBoxButton = boolForCheckBoxButton[selectedDate] {
                 listCell.toDoListText.text = toDoList[indexPath.row]
                 listCell.checkBoxButton.tag = indexPath.row
                 listCell.toDoListText.tag = indexPath.row
-            }
-            
-            if let boolForCheckBoxButton = boolForCheckBoxButton[selectedDate] {
+                
                 if boolForCheckBoxButton[indexPath.row] {
                     listCell.checkBoxButton.setImage(UIImage(named: "checkBox"), for: .normal)
+                    
+                    let attributeString: NSMutableAttributedString = NSMutableAttributedString(string: toDoList[indexPath.row])
+                    attributeString.addAttribute(NSAttributedString.Key.strikethroughStyle, value: 2, range: NSMakeRange(0, attributeString.length))
+                    listCell.toDoListText.attributedText = attributeString
+
                 } else {
                     listCell.checkBoxButton.setImage(UIImage(named: "emptyBox"), for: .normal)
                 }
@@ -174,6 +173,12 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        
+        if let text = paramText, let date = paraDate, let cellRow = paraCellRow {
+            toDoLists[date]![cellRow] = text
+        }
+        
+        self.tableView.reloadData()
     }
     
     override func viewDidLoad() {
@@ -189,6 +194,21 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
         loadSavedData()
         
         // Do any additional setup after loading the view, typically from a nib.
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        guard let textCell: ToDoTableViewCell = sender as? ToDoTableViewCell else {
+            return
+        }
+        guard let textViewController: TextViewController = segue.destination as? TextViewController else {
+            return
+        }
+        
+        textViewController.selectedDate = self.selectedDate
+        textViewController.cellRow = textCell.toDoListText.tag
+        if let text = textCell.toDoListText.text {
+            textViewController.text = text
+        }
     }
 
     override func didReceiveMemoryWarning() {
